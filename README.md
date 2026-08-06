@@ -1,3 +1,5 @@
+<div align="center">
+
 🧬 PCOS Multiclass Prediction
 
 Machine Learning Dashboard with Random Forest & Support Vector Machine
@@ -10,33 +12,17 @@ An educational three-class PCOS prediction project built with Python, scikit-lea
 
 ✨ Project at a Glance
 
-Problem
-
-Extend an academic binary PCOS prediction task into a three-class ML experiment
-
-Classes
-
-🟢 Tidak PCOS · 🟠 Borderline · 🔴 PCOS Positif
-
-Models
-
-Random Forest and RBF-kernel Support Vector Machine
-
-Dataset
-
-541 rows, 41 model features
-
-Best model
-
-SVM — 90.83% accuracy, 91.34% weighted F1, 80.48% macro F1
-
-Interface
-
-Interactive Streamlit dashboard with batch Excel upload
-
-Context
-
-Final Semester Examination (UAS) — Pembelajaran Mesin / Machine Learning
+<table>
+  <tbody>
+    <tr><td><strong>Problem</strong></td><td>Extend an academic binary PCOS prediction task into a three-class ML experiment</td></tr>
+    <tr><td><strong>Classes</strong></td><td>🟢 Tidak PCOS &nbsp;·&nbsp; 🟠 Borderline &nbsp;·&nbsp; 🔴 PCOS Positif</td></tr>
+    <tr><td><strong>Models</strong></td><td>Random Forest and RBF-kernel Support Vector Machine</td></tr>
+    <tr><td><strong>Dataset</strong></td><td>541 rows · 41 model features</td></tr>
+    <tr><td><strong>Best model</strong></td><td>SVM — 90.83% accuracy · 91.34% weighted F1 · 80.48% macro F1</td></tr>
+    <tr><td><strong>Interface</strong></td><td>Interactive Streamlit dashboard with batch Excel upload</td></tr>
+    <tr><td><strong>Context</strong></td><td>Final Semester Examination (UAS) — Pembelajaran Mesin / Machine Learning</td></tr>
+  </tbody>
+</table>
 
 [!IMPORTANT]This repository is an educational machine-learning prototype, not a diagnostic device. Borderline and PCOS Positif are project-derived labels and are not clinically validated severity categories.
 
@@ -77,41 +63,17 @@ H --> I[CSV Export]
 
 Metrics were calculated on a held-out stratified test set of 109 rows with random_state=42.
 
-Model
-
-Accuracy
-
-Weighted Precision
-
-Weighted F1
-
-Macro F1
-
-Weighted ROC-AUC
-
-Random Forest
-
-90.83%
-
-85.82%
-
-88.25%
-
-61.95%
-
-98.28%
-
-Support Vector Machine
-
-90.83%
-
-92.44%
-
-91.34%
-
-80.48%
-
-98.66%
+<table>
+  <thead>
+    <tr>
+      <th>Model</th><th align="center">Accuracy</th><th align="center">Weighted Precision</th><th align="center">Weighted F1</th><th align="center">Macro F1</th><th align="center">ROC-AUC</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>Random Forest</td><td align="center"><strong>90.83%</strong></td><td align="center">85.82%</td><td align="center">88.25%</td><td align="center">61.95%</td><td align="center">98.28%</td></tr>
+    <tr><td><strong>Support Vector Machine</strong></td><td align="center"><strong>90.83%</strong></td><td align="center"><strong>92.44%</strong></td><td align="center"><strong>91.34%</strong></td><td align="center"><strong>80.48%</strong></td><td align="center"><strong>98.66%</strong></td></tr>
+  </tbody>
+</table>
 
 Why SVM is the default
 
@@ -141,21 +103,14 @@ Three-class academic extension
 
 The source workbook contains a binary PCOS target. For the multiclass experiment used in the project presentation, the target is reconstructed as:
 
-Project class
-
-Rule used in this project
-
-🟢 Tidak PCOS
-
-Original PCOS target = 0
-
-🟠 Borderline
-
-Original target = 1 and selected symptom score = 0–2
-
-🔴 PCOS Positif
-
-Original target = 1 and selected symptom score = 3–6
+<table>
+  <thead><tr><th>Project Class</th><th>Rule Used in This Project</th></tr></thead>
+  <tbody>
+    <tr><td>🟢 <strong>Tidak PCOS</strong></td><td>Original PCOS target = <code>0</code></td></tr>
+    <tr><td>🟠 <strong>Borderline</strong></td><td>Original target = <code>1</code> and selected symptom score = <code>0–2</code></td></tr>
+    <tr><td>🔴 <strong>PCOS Positif</strong></td><td>Original target = <code>1</code> and selected symptom score = <code>3–6</code></td></tr>
+  </tbody>
+</table>
 
 The six binary indicators are weight gain, hair growth, skin darkening, hair loss, pimples, and fast-food consumption.
 
@@ -189,37 +144,18 @@ Feature importance describes model behavior, not medical causation.
 
 🧰 Tech Stack
 
-Layer
-
-Technology
-
-Language
-
-Python 3.11+
-
-ML
-
-scikit-learn 1.8
-
-Data
-
-pandas, NumPy, openpyxl
-
-Visualization
-
-Matplotlib, Seaborn
-
-Interface
-
-Streamlit
-
-Model artifacts
-
-joblib
-
-Testing
-
-unittest
+<table>
+  <thead><tr><th>Layer</th><th>Technology</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Language</strong></td><td>Python 3.11+</td></tr>
+    <tr><td><strong>Machine Learning</strong></td><td>scikit-learn 1.8</td></tr>
+    <tr><td><strong>Data</strong></td><td>pandas · NumPy · openpyxl</td></tr>
+    <tr><td><strong>Visualization</strong></td><td>Matplotlib · Seaborn</td></tr>
+    <tr><td><strong>Interface</strong></td><td>Streamlit</td></tr>
+    <tr><td><strong>Model Artifacts</strong></td><td>joblib</td></tr>
+    <tr><td><strong>Testing</strong></td><td>unittest</td></tr>
+  </tbody>
+</table>
 
 📁 Project Structure
 
@@ -296,21 +232,32 @@ This project was developed as a Final Semester Examination (UAS) project for the
 
 👥 Team — Kelompok 10
 
-NBI
-
-Name
-
-1462400047
-
-Hilva Najwa Aulia
-
-1462400146
-
-Nahnu Rohmania
-
-1462400167
-
-Zenicio Xavier Brito De Carvalho
+<table>
+  <thead>
+    <tr>
+      <th align="center">No.</th>
+      <th align="center">NBI</th>
+      <th align="left">Nama Anggota</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td align="center">1</td>
+      <td align="center"><code>1462400047</code></td>
+      <td><strong>Hilva Najwa Aulia</strong></td>
+    </tr>
+    <tr>
+      <td align="center">2</td>
+      <td align="center"><code>1462400146</code></td>
+      <td><strong>Nahnu Rohmania</strong></td>
+    </tr>
+    <tr>
+      <td align="center">3</td>
+      <td align="center"><code>1462400167</code></td>
+      <td><strong>Zenicio Xavier Brito De Carvalho</strong></td>
+    </tr>
+  </tbody>
+</table>
 
 Repository maintained by @bioonahnuu-design.
 
