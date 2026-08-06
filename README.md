@@ -1,34 +1,81 @@
-PCOS Machine Learning Prediction
+🧬 PCOS Multiclass Prediction
 
-A reproducible three-class PCOS screening project using Random Forest and Support Vector Machine (SVM), served through an interactive Streamlit application.
+Machine Learning Dashboard with Random Forest & Support Vector Machine
 
-Academic context: Developed as a Final Semester Examination (UAS) project for the Machine Learning / Pembelajaran Mesin course in Informatics Engineering at Universitas 17 Agustus 1945 Surabaya.
+An educational three-class PCOS prediction project built with Python, scikit-learn, and Streamlit.
 
-Medical disclaimer: This is an educational prototype, not a diagnostic device. Borderline and PCOS Positif are project-derived symptom-score labels and are not clinically validated severity categories. Predictions must not replace examination, laboratory interpretation, or advice from a qualified healthcare professional.
+541 records · 41 features · 3 project classes · 2 ML models
 
-Highlights
+</div>
 
-Reproducible model training from the included Excel dataset
+✨ Project at a Glance
 
-Three project classes: Tidak PCOS, Borderline, and PCOS Positif
+Problem
 
-Random Forest and RBF-kernel SVM comparison
+Extend an academic binary PCOS prediction task into a three-class ML experiment
 
-Median imputation fitted only on training data
+Classes
 
-Standardization inside the SVM training pipeline
+🟢 Tidak PCOS · 🟠 Borderline · 🔴 PCOS Positif
 
-Stratified 80/20 train-test split
+Models
 
-Probability estimates and downloadable CSV results
+Random Forest and RBF-kernel Support Vector Machine
 
-Polished Streamlit dashboard with class composition, confidence, held-out confusion matrix, and feature importance
+Dataset
 
-Automated tests for preprocessing and feature alignment
+541 rows, 41 model features
 
-Model performance
+Best model
 
-Metrics below were calculated on a held-out stratified test set of 109 rows using random state 42.
+SVM — 90.83% accuracy, 91.34% weighted F1, 80.48% macro F1
+
+Interface
+
+Interactive Streamlit dashboard with batch Excel upload
+
+Context
+
+Final Semester Examination (UAS) — Pembelajaran Mesin / Machine Learning
+
+[!IMPORTANT]This repository is an educational machine-learning prototype, not a diagnostic device. Borderline and PCOS Positif are project-derived labels and are not clinically validated severity categories.
+
+🎯 What the App Does
+
+The application accepts a compatible Excel workbook and runs batch predictions using the selected classifier. It provides:
+
+Three-class prediction: Tidak PCOS, Borderline, and PCOS Positif
+
+Random Forest / SVM model selection
+
+Prediction confidence for every processed row
+
+Class-composition visualization
+
+Held-out test metrics
+
+Multiclass confusion matrix
+
+Random Forest feature-importance visualization
+
+Data explorer and downloadable CSV results
+
+🧠 Machine Learning Workflow
+
+flowchart LR
+A[Excel Dataset] --> B[Cleaning & Feature Alignment]
+B --> C[Derived 3-Class Target]
+C --> D[Stratified 80/20 Split]
+D --> E[Random Forest]
+D --> F[RBF SVM]
+E --> G[Evaluation]
+F --> G
+G --> H[Streamlit Dashboard]
+H --> I[CSV Export]
+
+📊 Model Performance
+
+Metrics were calculated on a held-out stratified test set of 109 rows with random_state=42.
 
 Model
 
@@ -54,7 +101,7 @@ Random Forest
 
 98.28%
 
-SVM
+Support Vector Machine
 
 90.83%
 
@@ -66,67 +113,115 @@ SVM
 
 98.66%
 
-SVM is the default model because it achieved the stronger weighted F1, macro F1, and ROC-AUC. Random Forest did not identify the small Borderline class in this particular test split, which is why accuracy alone should not be used to select the model.
+Why SVM is the default
 
-Dataset
+Both models reached the same overall accuracy, but SVM produced stronger Weighted F1, Macro F1, and ROC-AUC. Macro F1 is especially relevant here because the derived Borderline class is much smaller than the other classes.
+
+Random Forest remains available because its feature-importance output makes model behavior easier to inspect.
+
+🗂️ Dataset
 
 The included workbook contains:
 
-541 rows
+541 records
 
 41 model features
 
-364 Tidak PCOS records
+364 original non-PCOS records
 
 31 derived Borderline records
 
 146 derived PCOS Positif records
 
-Target column: PCOS (Y/N)
+Original target column: PCOS (Y/N)
 
 Feature groups include demographic measurements, menstrual-cycle information, hormone measurements, physical symptoms, blood pressure, and follicle measurements. Identifier columns are excluded from training.
 
-Derived three-class target
+Three-class academic extension
 
-The original workbook provides a binary PCOS target. For the academic multiclass extension used in the project presentation, the target is reconstructed as follows:
+The source workbook contains a binary PCOS target. For the multiclass experiment used in the project presentation, the target is reconstructed as:
 
-Original PCOS target 0 → Tidak PCOS
+Project class
 
-Original PCOS target 1 with 0–2 selected symptoms → Borderline
+Rule used in this project
 
-Original PCOS target 1 with 3–6 selected symptoms → PCOS Positif
+🟢 Tidak PCOS
 
-The six binary indicators are weight gain, hair growth, skin darkening, hair loss, pimples, and fast-food consumption. This is a project-defined grouping for machine-learning experimentation, not a validated clinical severity scale.
+Original PCOS target = 0
 
-The repository copy does not currently document the dataset's original publication URL or license. Add the authoritative source and license before redistributing the dataset beyond this educational repository.
+🟠 Borderline
 
-Top Random Forest features
+Original target = 1 and selected symptom score = 0–2
 
-The trained Random Forest ranks these among its most influential features:
+🔴 PCOS Positif
+
+Original target = 1 and selected symptom score = 3–6
+
+The six binary indicators are weight gain, hair growth, skin darkening, hair loss, pimples, and fast-food consumption.
+
+This rule is an academic grouping for machine-learning experimentation. It must not be interpreted as a validated clinical PCOS severity scale.
+
+🔎 Random Forest Model Insights
+
+The current Random Forest ranks these among its most influential features:
 
 Right follicle count
 
 Left follicle count
 
-Skin darkening
-
-Weight gain
-
 Hair growth
 
-Fast-food frequency indicator
+Skin darkening
+
+Fast-food indicator
 
 AMH
 
-BMI
+Average right follicle size
 
 Waist-to-hip ratio
 
-LH
+Weight gain
 
-Feature importance describes model behavior and must not be interpreted as medical causation.
+Average left follicle size
 
-Project structure
+Feature importance describes model behavior, not medical causation.
+
+🧰 Tech Stack
+
+Layer
+
+Technology
+
+Language
+
+Python 3.11+
+
+ML
+
+scikit-learn 1.8
+
+Data
+
+pandas, NumPy, openpyxl
+
+Visualization
+
+Matplotlib, Seaborn
+
+Interface
+
+Streamlit
+
+Model artifacts
+
+joblib
+
+Testing
+
+unittest
+
+📁 Project Structure
 
 PCOS_ML_Prediction/
 ├── .devcontainer/
@@ -140,9 +235,10 @@ PCOS_ML_Prediction/
 ├── svm_pcos.pkl
 ├── train_models.py
 ├── requirements.txt
+├── LICENSE
 └── README.md
 
-Installation
+🚀 Run Locally
 
 git clone https://github.com/bioonahnuu-design/PCOS_ML_Prediction.git
 cd PCOS_ML_Prediction
@@ -152,40 +248,37 @@ Windows PowerShell:
 
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
-
-Run the Streamlit application
-
 streamlit run app.py
 
-Open http://localhost:8501, choose a model, and upload an Excel workbook containing a sheet named Full_new.
+Open http://localhost:8501, choose a classifier, and upload a compatible .xlsx workbook containing a Full_new sheet.
 
-Reproduce model training
+♻️ Reproduce Training
 
 python train_models.py
 
-This regenerates both model artifacts and metrics.json from the included dataset.
+This regenerates the Random Forest and SVM model artifacts together with metrics.json.
 
-Run tests
+✅ Run Tests
 
 python -m unittest discover -s tests -v
 
-Limitations
+The tests cover multiclass target construction, required-target validation, and prediction feature alignment.
 
-The dataset is small and strongly class-imbalanced, especially the 31-row Borderline class.
+⚠️ Limitations
 
-The three-class target is derived from symptoms that are also model inputs, so reported performance measures reproducibility of the project rule—not independent clinical validity.
+The dataset is small and class-imbalanced, especially the derived Borderline class.
 
-Results come from one stratified holdout split, not external clinical validation.
+The three-class target is derived from symptoms that are also used as model inputs.
 
-The application performs batch classification from a structured workbook.
+Metrics therefore measure reproducibility of the academic project rule, not independent clinical validity.
 
-Missing features are imputed and may reduce prediction reliability.
+Evaluation currently uses one stratified hold-out split rather than external clinical validation.
 
-Model performance may not generalize to other populations or clinical settings.
+Missing input features are imputed and may reduce reliability.
 
-Original dataset provenance and license still need authoritative documentation.
+The original dataset publication URL and license are not yet documented in this repository.
 
-Roadmap
+🛣️ Roadmap
 
 Add authoritative dataset source and license
 
@@ -195,11 +288,13 @@ Add multiclass ROC-curve visualization
 
 Add model-card documentation
 
-Add a polished application screenshot
+Add a dashboard screenshot to this README
 
-Publish the educational demo on Streamlit Community Cloud
+🎓 Academic Context
 
-Team — Kelompok 10
+This project was developed as a Final Semester Examination (UAS) project for the Pembelajaran Mesin (Machine Learning) course, Informatics Engineering, Universitas 17 Agustus 1945 Surabaya.
+
+👥 Team — Kelompok 10
 
 NBI
 
@@ -217,6 +312,10 @@ Nahnu Rohmania
 
 Zenicio Xavier Brito De Carvalho
 
-Informatics Engineering — Universitas 17 Agustus 1945 Surabaya.
+Repository maintained by @bioonahnuu-design.
 
-Project repository maintained by Nahnu Rohmania.
+<div align="center">
+
+Built for learning, reproducibility, and responsible machine-learning demonstration.
+
+</div>
