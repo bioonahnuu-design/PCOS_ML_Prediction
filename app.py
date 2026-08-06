@@ -1,444 +1,349 @@
-import os
+"""Streamlit dashboard for the reproducible three-class PCOS classifiers."""
+
+from __future__ import annotations
+
 import io
+import json
+from pathlib import Path
+
 import joblib
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import streamlit as st
-import matplotlib.pyplot as plt
 import seaborn as sns
+import streamlit as st
 
-# =========================================================
-# KONFIGURASI HALAMAN
-# =========================================================
+from pcos_utils import prepare_prediction_features, read_dataset
+
+BASE_DIR = Path(__file__).resolve().parent
+MODEL_PATHS = {
+    "Random Forest": BASE_DIR / "random_forest_pcos.pkl",
+    "Support Vector Machine": BASE_DIR / "svm_pcos.pkl",
+}
+LABELS = {0: "Tidak PCOS", 1: "Borderline", 2: "PCOS Positif"}
+CLASS_ORDER = list(LABELS.values())
+CLASS_COLORS = ["#22c55e", "#f59e0b", "#ef4444"]
+
 st.set_page_config(
-    page_title="PCOS Prediction System",
-    page_icon="🩺",
+    page_title="PCOS ML Screening Dashboard",
+    page_icon="🧬",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
 )
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+st.markdown(
+    """
+    <style>
+    .stApp { background: #f8fafc; }
+    section[data-testid="stSidebar"],
+    section[data-testid="stSidebar"] > div,
+    div[data-testid="stSidebarContent"] {
+        background: #ffffff !important;
+        background-color: #ffffff !important;
+        color: #0f172a !important;
+    }
+    section[data-testid="stSidebar"] {
+        border-right: 1px solid #dbe7e5 !important;
+        box-shadow: 8px 0 24px rgba(15, 23, 42, .035) !important;
+    }
+    section[data-testid="stSidebar"] * {
+        color: #0f172a !important;
+    }
+    section[data-testid="stSidebar"] [data-testid="stCaptionContainer"],
+    section[data-testid="stSidebar"] [data-testid="stCaptionContainer"] *,
+    section[data-testid="stSidebar"] small {
+        color: #64748b !important;
+    }
+    section[data-testid="stSidebar"] hr {
+        border-color: #e2e8f0 !important;
+    }
+    .block-container { padding-top: 2.1rem; padding-bottom: 3rem; max-width: 1450px; }
+    .hero {
+        padding: 1.65rem 1.8rem; border-radius: 22px; color: #0f172a;
+        background: linear-gradient(120deg, #ffffff 0%, #f0fdfa 55%, #ccfbf1 100%);
+        border: 1px solid #cce8e3;
+        box-shadow: 0 12px 30px rgba(15, 118, 110, .08); margin-bottom: 1.1rem;
+    }
+    .hero h1 { margin: 0; color:#0f172a; font-size: 2.15rem; letter-spacing: -.035em; }
+    .hero p { margin: .45rem 0 0; color: #475569; font-size: 1rem; }
+    .eyebrow { color: #0f766e; font-size: .76rem; font-weight: 800; letter-spacing: .14em; }
+    .class-card {
+        padding: 1.05rem 1.2rem; border: 1px solid #e2e8f0; border-radius: 16px;
+        background: white; box-shadow: 0 5px 18px rgba(15,23,42,.05); min-height: 116px;
+    }
+    .class-card .label { color: #64748b; font-size: .84rem; font-weight: 700; }
+    .class-card .value { color: #0f172a; font-size: 2rem; font-weight: 800; line-height: 1.2; }
+    .class-card .share { color: #64748b; font-size: .78rem; }
+    .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 7px; }
+    .section-title { color:#0f172a; font-weight:800; font-size:1.2rem; margin:.2rem 0 .15rem; }
+    .section-copy { color:#64748b; margin-bottom:.75rem; font-size:.9rem; }
+    [data-testid="stMetric"] {
+        background:white; border:1px solid #e2e8f0; padding:.85rem 1rem;
+        border-radius:14px; box-shadow:0 4px 14px rgba(15,23,42,.04);
+    }
+    [data-testid="stMetricLabel"] * { color:#64748b !important; }
+    [data-testid="stMetricValue"] * { color:#0f172a !important; }
+    section[data-testid="stSidebar"] [data-testid="stMetric"] {
+        background: #f8fafc !important;
+        border: 1px solid #dbe7e5 !important;
+        box-shadow: none !important;
+    }
+    section[data-testid="stSidebar"] div[role="radiogroup"] label {
+        background: transparent !important;
+        border: 0 !important;
+        padding: .15rem 0 !important;
+    }
+    div[role="radiogroup"] { gap: .55rem; }
+    div[role="radiogroup"] label {
+        background: #ffffff; border: 1px solid #dbe7e5; border-radius: 12px;
+        padding: .55rem .8rem; transition: all .15s ease;
+    }
+    div[data-testid="stDataFrame"] { border:1px solid #e2e8f0; border-radius:14px; overflow:hidden; }
+    .medical-note {
+        padding:.8rem 1rem; border-radius:12px; border-left:4px solid #f59e0b;
+        background:#fffbeb; color:#78350f; font-size:.86rem; margin-bottom:1rem;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
-RF_PATH = os.path.join(BASE_DIR, "random_forest_pcos.pkl")
-SVM_PATH = os.path.join(BASE_DIR, "svm_pcos.pkl")
-SCALER_PATH = os.path.join(BASE_DIR, "scaler.pkl")
 
-LABEL_MAP = {
-    0: "Tidak PCOS",
-    1: "PCOS Ringan",
-    2: "PCOS Berat"
-}
-
-COLUMNS_TO_DROP = ["Sl. No", "Patient File No.", "Unnamed: 44"]
-
-
-# =========================================================
-# FUNGSI BANTUAN
-# =========================================================
 @st.cache_resource
 def load_artifacts():
-    errors = []
-    rf_model = None
-    svm_model = None
-    scaler = None
-
-    if os.path.exists(RF_PATH):
-        try:
-            rf_model = joblib.load(RF_PATH)
-        except Exception as e:
-            errors.append(f"Gagal memuat random_forest_pcos.pkl: {e}")
-    else:
-        errors.append("File random_forest_pcos.pkl tidak ditemukan di folder aplikasi.")
-
-    if os.path.exists(SVM_PATH):
-        try:
-            svm_model = joblib.load(SVM_PATH)
-        except Exception as e:
-            errors.append(f"Gagal memuat svm_pcos.pkl: {e}")
-    else:
-        errors.append("File svm_pcos.pkl tidak ditemukan di folder aplikasi.")
-
-    if os.path.exists(SCALER_PATH):
-        try:
-            scaler = joblib.load(SCALER_PATH)
-        except Exception as e:
-            errors.append(f"Gagal memuat scaler.pkl: {e}")
-    else:
-        errors.append("File scaler.pkl tidak ditemukan di folder aplikasi.")
-
-    return rf_model, svm_model, scaler, errors
+    models = {name: joblib.load(path) for name, path in MODEL_PATHS.items()}
+    metrics = json.loads((BASE_DIR / "metrics.json").read_text(encoding="utf-8"))
+    return models, metrics
 
 
-def clean_dataset(raw_df: pd.DataFrame) -> pd.DataFrame:
-    df = raw_df.copy()
-
-    # Strip nama kolom
-    df.columns = df.columns.astype(str).str.strip()
-
-    # Hapus kolom yang tidak diperlukan
-    for col in COLUMNS_TO_DROP:
-        col_stripped = col.strip()
-        matching = [c for c in df.columns if c.strip() == col_stripped]
-        for m in matching:
-            df.drop(columns=[m], inplace=True, errors="ignore")
-
-    # Ubah koma menjadi titik pada kolom bertipe object
-    for col in df.columns:
-        if df[col].dtype == object:
-            df[col] = df[col].astype(str).str.strip()
-            df[col] = df[col].str.replace(",", ".", regex=False)
-            df[col] = df[col].replace({"nan": np.nan, "": np.nan, "None": np.nan})
-
-    # Convert numeric untuk seluruh kolom yang memungkinkan
-    for col in df.columns:
-        converted = pd.to_numeric(df[col], errors="coerce")
-        # Jika sebagian besar nilai berhasil dikonversi, gunakan versi numerik
-        non_null_original = df[col].notna().sum()
-        non_null_converted = converted.notna().sum()
-        if non_null_original == 0 or non_null_converted >= non_null_original * 0.5:
-            df[col] = converted
-
-    # Hitung ulang BMI jika kolom Weight dan Height tersedia
-    weight_col = None
-    height_col = None
-    bmi_col = None
-
-    for c in df.columns:
-        c_lower = c.lower()
-        if "weight" in c_lower and "kg" in c_lower:
-            weight_col = c
-        if "height" in c_lower:
-            height_col = c
-        if c_lower.strip() == "bmi":
-            bmi_col = c
-
-    if weight_col is not None and height_col is not None:
-        height_m = df[height_col] / 100.0
-        with np.errstate(divide="ignore", invalid="ignore"):
-            recalculated_bmi = df[weight_col] / (height_m ** 2)
-        if bmi_col is not None:
-            df[bmi_col] = recalculated_bmi
-        else:
-            df["BMI"] = recalculated_bmi
-
-    # Isi missing value numerik dengan median
-    numeric_cols = df.select_dtypes(include=[np.number]).columns
-    for col in numeric_cols:
-        if df[col].isna().any():
-            median_val = df[col].median()
-            df[col] = df[col].fillna(median_val)
-
-    # Isi missing value kategorikal dengan modus
-    categorical_cols = df.select_dtypes(include=["object"]).columns
-    for col in categorical_cols:
-        if df[col].isna().any():
-            mode_series = df[col].mode(dropna=True)
-            if len(mode_series) > 0:
-                df[col] = df[col].fillna(mode_series.iloc[0])
-
-    return df
-
-
-def align_features(df: pd.DataFrame, reference_features):
-    """
-    Menyusun ulang dan menyaring kolom dataframe agar sama persis
-    dengan urutan dan nama fitur yang diharapkan oleh model/scaler.
-    """
-    missing_features = [f for f in reference_features if f not in df.columns]
-    extra_features = [f for f in df.columns if f not in reference_features]
-
-    # Tambahkan kolom yang hilang dengan nilai 0 agar tidak error
-    for f in missing_features:
-        df[f] = 0
-
-    aligned_df = df[list(reference_features)]
-    return aligned_df, missing_features, extra_features
-
-
-def get_reference_features(scaler, model):
-    if hasattr(scaler, "feature_names_in_"):
-        return list(scaler.feature_names_in_)
-    if hasattr(model, "feature_names_in_"):
-        return list(model.feature_names_in_)
-    return None
-
-
-def find_target_like_columns(df: pd.DataFrame):
-    target_cols = []
-    for c in df.columns:
-        c_lower = c.lower()
-        if "pcos" in c_lower:
-            target_cols.append(c)
-    return target_cols
-
-
-# =========================================================
-# HEADER
-# =========================================================
-st.markdown(
-    """
-    <div style="text-align:center; padding: 10px 0 20px 0;">
-        <h1>🩺 PCOS Prediction System</h1>
-        <h4 style="color:gray; font-weight:400;">
-            Prediksi Tingkat Keparahan PCOS Menggunakan Machine Learning
-        </h4>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-
-rf_model, svm_model, scaler, load_errors = load_artifacts()
-
-if load_errors:
-    for err in load_errors:
-        st.error(err)
-    st.warning(
-        "Pastikan file random_forest_pcos.pkl, svm_pcos.pkl, dan scaler.pkl "
-        "berada pada folder yang sama dengan app.py sebelum menjalankan prediksi."
+def render_class_card(label: str, value: int, total: int, color: str) -> None:
+    share = (value / total * 100) if total else 0
+    st.markdown(
+        f"""<div class="class-card">
+        <div class="label"><span class="dot" style="background:{color}"></span>{label}</div>
+        <div class="value">{value:,}</div>
+        <div class="share">{share:.1f}% dari {total:,} baris</div>
+        </div>""",
+        unsafe_allow_html=True,
     )
 
-# =========================================================
-# SIDEBAR
-# =========================================================
-st.sidebar.header("⚙️ Pengaturan")
-model_choice = st.sidebar.radio(
-    "Pilih Model",
-    options=["Random Forest", "Support Vector Machine"],
-    index=0
-)
 
-st.sidebar.markdown("---")
-st.sidebar.markdown("### 📌 Informasi")
-st.sidebar.info(
-    "Upload dataset PCOS dalam format .xlsx pada panel utama, "
-    "lalu sistem akan melakukan preprocessing dan prediksi secara otomatis."
-)
+def style_figure(figure: plt.Figure) -> None:
+    figure.patch.set_facecolor("#ffffff")
+    figure.tight_layout()
 
-selected_model = rf_model if model_choice == "Random Forest" else svm_model
-selected_model_name = "Random Forest" if model_choice == "Random Forest" else "Support Vector Machine (SVM)"
 
-# =========================================================
-# UPLOAD DATASET
-# =========================================================
-st.markdown("## 📂 Upload Dataset")
-uploaded_file = st.file_uploader("Upload file dataset (.xlsx)", type=["xlsx"])
-
-if uploaded_file is not None:
-    try:
-        raw_df = pd.read_excel(uploaded_file, sheet_name=1)
-    except Exception as e:
-        st.error(f"Gagal membaca sheet ke-2 dari file yang diupload: {e}")
-        st.stop()
-
-    with st.spinner("Melakukan preprocessing data..."):
-        try:
-            df_clean = clean_dataset(raw_df)
-        except Exception as e:
-            st.error(f"Terjadi kesalahan saat preprocessing data: {e}")
-            st.stop()
-
-    st.success("Dataset berhasil diupload dan diproses!")
-
-    # =========================================================
-    # PREVIEW DATASET
-    # =========================================================
-    st.markdown("## 👀 Preview Dataset")
-    with st.container():
-        st.dataframe(df_clean.head(10), use_container_width=True)
-
-        col1, col2 = st.columns(2)
-        with col1:
-            st.metric("Jumlah Data", f"{df_clean.shape[0]}")
-        with col2:
-            st.metric("Jumlah Feature", f"{df_clean.shape[1]}")
-
-    # =========================================================
-    # VALIDASI MODEL & SCALER
-    # =========================================================
-    if selected_model is None or scaler is None:
-        st.error(
-            "Model atau scaler belum berhasil dimuat. "
-            "Prediksi tidak dapat dilanjutkan."
-        )
-        st.stop()
-
-    # =========================================================
-    # SIAPKAN FITUR SESUAI MODEL
-    # =========================================================
-    df_features = df_clean.copy()
-
-    target_like_cols = find_target_like_columns(df_features)
-    for c in target_like_cols:
-        df_features.drop(columns=[c], inplace=True, errors="ignore")
-
-    # Hanya gunakan kolom numerik untuk proses scaling & prediksi
-    df_features = df_features.select_dtypes(include=[np.number])
-
-    reference_features = get_reference_features(scaler, selected_model)
-
-    if reference_features is None:
-        st.warning(
-            "Model/scaler tidak menyimpan informasi nama fitur (feature_names_in_). "
-            "Sistem akan menggunakan seluruh kolom numerik yang tersedia sesuai urutan dataset."
-        )
-        X = df_features
-    else:
-        X, missing_feats, extra_feats = align_features(df_features, reference_features)
-        if missing_feats:
-            st.warning(
-                "Beberapa fitur yang dibutuhkan model tidak ditemukan pada dataset "
-                f"dan diisi dengan nilai 0: {', '.join(missing_feats)}"
-            )
-
-    # =========================================================
-    # SCALING & PREDIKSI
-    # =========================================================
-    try:
-        X_scaled = scaler.transform(X)
-    except Exception as e:
-        st.error(f"Terjadi kesalahan saat melakukan scaling data: {e}")
-        st.stop()
-
-    try:
-        predictions = selected_model.predict(X_scaled)
-    except Exception as e:
-        st.error(f"Terjadi kesalahan saat melakukan prediksi: {e}")
-        st.stop()
-
-    predictions = np.array(predictions).astype(int)
-    prediction_labels = pd.Series(predictions).map(LABEL_MAP)
-
-    result_df = df_clean.copy()
-    result_df["Prediction"] = prediction_labels.values
-
-    st.markdown("---")
-    st.markdown(f"## 🔮 Hasil Prediksi — Model: **{selected_model_name}**")
-
-    # =========================================================
-    # RINGKASAN JUMLAH KELAS
-    # =========================================================
-    counts = prediction_labels.value_counts()
-    tidak_pcos = int(counts.get("Tidak PCOS", 0))
-    pcos_ringan = int(counts.get("PCOS Ringan", 0))
-    pcos_berat = int(counts.get("PCOS Berat", 0))
-
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("🟢 Tidak PCOS", tidak_pcos)
-    with col2:
-        st.metric("🟡 PCOS Ringan", pcos_ringan)
-    with col3:
-        st.metric("🔴 PCOS Berat", pcos_berat)
-
-    if pcos_berat > 0:
-        st.warning(f"Terdapat {pcos_berat} data dengan prediksi PCOS Berat. Perlu perhatian lebih lanjut.")
-    else:
-        st.success("Tidak ditemukan data dengan prediksi PCOS Berat.")
-
-    # =========================================================
-    # VISUALISASI
-    # =========================================================
-    st.markdown("### 📊 Visualisasi Distribusi Hasil Prediksi")
-    viz_col1, viz_col2 = st.columns(2)
-
-    with viz_col1:
-        st.markdown("**Pie Chart — Distribusi Hasil Prediksi**")
-        fig_pie, ax_pie = plt.subplots(figsize=(5, 5))
-        labels_order = ["Tidak PCOS", "PCOS Ringan", "PCOS Berat"]
-        values_order = [tidak_pcos, pcos_ringan, pcos_berat]
-        colors = ["#2ecc71", "#f1c40f", "#e74c3c"]
-
-        non_zero_labels = [l for l, v in zip(labels_order, values_order) if v > 0]
-        non_zero_values = [v for v in values_order if v > 0]
-        non_zero_colors = [c for c, v in zip(colors, values_order) if v > 0]
-
-        if len(non_zero_values) > 0:
-            ax_pie.pie(
-                non_zero_values,
-                labels=non_zero_labels,
-                autopct="%1.1f%%",
-                colors=non_zero_colors,
-                startangle=90
-            )
-            ax_pie.axis("equal")
-            st.pyplot(fig_pie)
-        else:
-            st.info("Tidak ada data untuk ditampilkan pada pie chart.")
-
-    with viz_col2:
-        st.markdown("**Bar Chart — Distribusi Kelas**")
-        fig_bar, ax_bar = plt.subplots(figsize=(5, 5))
-        sns.barplot(
-            x=labels_order,
-            y=values_order,
-            palette=colors,
-            ax=ax_bar
-        )
-        ax_bar.set_xlabel("Kelas")
-        ax_bar.set_ylabel("Jumlah")
-        ax_bar.set_title("Distribusi Kelas Prediksi")
-        for i, v in enumerate(values_order):
-            ax_bar.text(i, v, str(v), ha="center", va="bottom", fontweight="bold")
-        st.pyplot(fig_bar)
-
-    # =========================================================
-    # FEATURE IMPORTANCE (RANDOM FOREST)
-    # =========================================================
-    if model_choice == "Random Forest" and hasattr(selected_model, "feature_importances_"):
-        st.markdown("### 🌲 Feature Importance — Top 10 (Random Forest)")
-
-        try:
-            if reference_features is not None:
-                feat_names = reference_features
-            else:
-                feat_names = list(X.columns)
-
-            importances = selected_model.feature_importances_
-            fi_df = pd.DataFrame({
-                "Feature": feat_names,
-                "Importance": importances
-            }).sort_values(by="Importance", ascending=False).head(10)
-
-            fig_fi, ax_fi = plt.subplots(figsize=(8, 5))
-            sns.barplot(
-                data=fi_df,
-                x="Importance",
-                y="Feature",
-                palette="viridis",
-                ax=ax_fi
-            )
-            ax_fi.set_title("Top 10 Feature Importance")
-            st.pyplot(fig_fi)
-        except Exception as e:
-            st.warning(f"Tidak dapat menampilkan feature importance: {e}")
-
-    # =========================================================
-    # TABEL HASIL & DOWNLOAD
-    # =========================================================
-    st.markdown("### 📋 Tabel Hasil Prediksi")
-    with st.container():
-        st.dataframe(result_df, use_container_width=True)
-
-        csv_buffer = io.StringIO()
-        result_df.to_csv(csv_buffer, index=False)
-        csv_data = csv_buffer.getvalue()
-
-        st.download_button(
-            label="⬇️ Download Hasil Prediksi (CSV)",
-            data=csv_data,
-            file_name="hasil_prediksi_pcos.csv",
-            mime="text/csv"
-        )
-
-else:
-    st.info("Silakan upload dataset dalam format .xlsx untuk memulai prediksi.")
-
-st.markdown("---")
 st.markdown(
-    """
-    <div style="text-align:center; color:gray; font-size:13px;">
-        PCOS Prediction System — Tugas Akhir Mata Kuliah Pemelajaran Mesin
-    </div>
-    """,
-    unsafe_allow_html=True
+    """<div class="hero">
+    <div class="eyebrow">MACHINE LEARNING • EDUCATIONAL SCREENING</div>
+    <h1>PCOS Multiclass Prediction Dashboard</h1>
+    <p>Explore three-class predictions with Random Forest &amp; Support Vector Machine.</p>
+    </div>""",
+    unsafe_allow_html=True,
+)
+st.markdown(
+    """<div class="medical-note"><b>Educational prototype.</b> “Borderline” and
+    “PCOS Positif” are project-derived labels for ML experimentation, not clinically
+    validated diagnoses or severity stages. Results must not replace professional
+    healthcare evaluation.</div>""",
+    unsafe_allow_html=True,
+)
+
+try:
+    models, metrics = load_artifacts()
+except Exception as exc:
+    st.error(f"Model artifacts could not be loaded: {exc}")
+    st.stop()
+
+st.sidebar.markdown("## 🧬 PCOS ML")
+st.sidebar.caption("Multiclass prediction workspace")
+st.sidebar.markdown("---")
+st.sidebar.markdown("### Model configuration")
+model_name = st.sidebar.radio("Choose classifier", list(MODEL_PATHS), index=1)
+selected_model = models[model_name]
+metric_key = "random_forest" if model_name == "Random Forest" else "svm"
+model_metrics = metrics["models"][metric_key]
+st.sidebar.markdown("### Held-out performance")
+st.sidebar.metric("Accuracy", f"{model_metrics['accuracy']:.2%}")
+st.sidebar.metric("Weighted F1", f"{model_metrics['f1_weighted']:.2%}")
+st.sidebar.metric("Macro F1", f"{model_metrics['f1_macro']:.2%}")
+st.sidebar.caption(
+    f"Stratified test set · {metrics['test_rows']} rows · random state {metrics['random_state']}"
+)
+st.sidebar.markdown("---")
+st.sidebar.caption("Nahnu Rohmania · Informatics Engineering")
+
+st.markdown('<div class="section-title">01 · Upload dataset</div>', unsafe_allow_html=True)
+st.markdown(
+    '<div class="section-copy">Use the project workbook or another compatible .xlsx file with a Full_new sheet.</div>',
+    unsafe_allow_html=True,
+)
+uploaded_file = st.file_uploader(
+    "Upload PCOS workbook", type=["xlsx"], label_visibility="collapsed"
+)
+if uploaded_file is None:
+    st.info(
+        "Upload an Excel workbook to start. The repository includes "
+        "PCOS_data_without_infertility.xlsx as the project sample."
+    )
+    st.stop()
+
+try:
+    raw_df = read_dataset(uploaded_file)
+    expected_features = list(selected_model.feature_names_in_)
+    features, missing, extra = prepare_prediction_features(raw_df, expected_features)
+    predictions = selected_model.predict(features).astype(int)
+    probabilities = selected_model.predict_proba(features)
+except Exception as exc:
+    st.error(f"Prediction failed: {exc}")
+    st.stop()
+
+if missing:
+    st.warning("Missing features were imputed: " + ", ".join(missing))
+if extra:
+    st.caption(f"{len(extra)} extra column(s) were ignored during model inference.")
+
+result_df = raw_df.copy()
+result_df["Prediction"] = pd.Series(predictions, index=result_df.index).map(LABELS)
+result_df["Confidence"] = probabilities.max(axis=1)
+counts = result_df["Prediction"].value_counts()
+total_rows = len(result_df)
+
+st.markdown('<div class="section-title">02 · Screening overview</div>', unsafe_allow_html=True)
+st.markdown(
+    f'<div class="section-copy">Batch results from <b>{model_name}</b> · {total_rows:,} rows processed.</div>',
+    unsafe_allow_html=True,
+)
+cards = st.columns(3)
+for column, label, color in zip(cards, CLASS_ORDER, CLASS_COLORS):
+    with column:
+        render_class_card(label, int(counts.get(label, 0)), total_rows, color)
+
+overview_tab, insight_tab, data_tab = st.tabs(
+    ["◉ Prediction overview", "⌁ Model insights", "▦ Data explorer"]
+)
+
+with overview_tab:
+    st.write("")
+    chart_col, table_col = st.columns([0.9, 1.55], gap="large")
+    with chart_col:
+        st.markdown("#### Class composition")
+        st.caption("Share of model predictions across all uploaded rows")
+        values = [int(counts.get(label, 0)) for label in CLASS_ORDER]
+        figure, axis = plt.subplots(figsize=(5.2, 4.2))
+        wedges, _ = axis.pie(
+            values,
+            startangle=90,
+            colors=CLASS_COLORS,
+            wedgeprops={"width": 0.34, "edgecolor": "white", "linewidth": 3},
+        )
+        axis.text(0, 0.08, f"{total_rows:,}", ha="center", va="center", fontsize=24, fontweight="bold")
+        axis.text(0, -0.12, "rows", ha="center", va="center", fontsize=10, color="#64748b")
+        axis.legend(wedges, CLASS_ORDER, loc="lower center", bbox_to_anchor=(0.5, -0.16), ncol=1, frameon=False)
+        style_figure(figure)
+        st.pyplot(figure, use_container_width=True)
+        plt.close(figure)
+
+    with table_col:
+        st.markdown("#### Prediction sample")
+        st.caption("First 20 rows with predicted class and model confidence")
+        preview = result_df[["Prediction", "Confidence"]].head(20).copy()
+        st.dataframe(
+            preview,
+            use_container_width=True,
+            hide_index=False,
+            column_config={
+                "Prediction": st.column_config.TextColumn("Predicted class"),
+                "Confidence": st.column_config.ProgressColumn(
+                    "Confidence", min_value=0.0, max_value=1.0, format="%.1%%"
+                ),
+            },
+        )
+        st.caption(
+            "Confidence is the model's highest predicted class probability; it is not clinical certainty."
+        )
+
+with insight_tab:
+    st.write("")
+    metric_cols = st.columns(4)
+    metric_cols[0].metric("Accuracy", f"{model_metrics['accuracy']:.2%}")
+    metric_cols[1].metric("Weighted F1", f"{model_metrics['f1_weighted']:.2%}")
+    metric_cols[2].metric("Macro F1", f"{model_metrics['f1_macro']:.2%}")
+    metric_cols[3].metric("ROC-AUC OvR", f"{model_metrics['roc_auc_ovr_weighted']:.2%}")
+
+    matrix_col, importance_col = st.columns(2, gap="large")
+    with matrix_col:
+        st.markdown("#### Held-out confusion matrix")
+        st.caption("Rows = actual project class · columns = predicted project class")
+        matrix = np.asarray(model_metrics["confusion_matrix"])
+        figure, axis = plt.subplots(figsize=(6.5, 4.8))
+        sns.heatmap(
+            matrix,
+            annot=True,
+            fmt="d",
+            cmap=sns.light_palette("#0f766e", as_cmap=True),
+            cbar=False,
+            xticklabels=CLASS_ORDER,
+            yticklabels=CLASS_ORDER,
+            ax=axis,
+        )
+        axis.set_xlabel("Predicted class")
+        axis.set_ylabel("Actual class")
+        axis.tick_params(axis="x", rotation=20)
+        axis.tick_params(axis="y", rotation=0)
+        style_figure(figure)
+        st.pyplot(figure, use_container_width=True)
+        plt.close(figure)
+
+    with importance_col:
+        st.markdown("#### Model interpretation")
+        if model_name == "Random Forest":
+            classifier = selected_model.named_steps["model"]
+            importance = (
+                pd.DataFrame({"Feature": expected_features, "Importance": classifier.feature_importances_})
+                .sort_values("Importance", ascending=False)
+                .head(10)
+                .sort_values("Importance")
+            )
+            st.caption("Top 10 Random Forest feature importances")
+            figure, axis = plt.subplots(figsize=(6.5, 4.8))
+            axis.barh(importance["Feature"], importance["Importance"], color="#0f766e")
+            axis.spines[["top", "right", "left"]].set_visible(False)
+            axis.grid(axis="x", color="#e2e8f0", linewidth=.8)
+            axis.set_axisbelow(True)
+            axis.set_xlabel("Importance")
+            axis.set_ylabel("")
+            style_figure(figure)
+            st.pyplot(figure, use_container_width=True)
+            plt.close(figure)
+        else:
+            st.caption("Why no feature-importance chart is shown for the RBF SVM")
+            st.info(
+                "The selected SVM uses a non-linear RBF kernel, so it does not expose "
+                "direct per-feature coefficients. Switch to Random Forest to inspect "
+                "its feature-importance ranking."
+            )
+            st.markdown(
+                "**Why SVM is the default:** it achieved stronger Macro F1 on the held-out "
+                "split, which matters because the Borderline class is small."
+            )
+
+with data_tab:
+    st.write("")
+    st.markdown("#### Uploaded dataset + predictions")
+    st.caption("Inspect the processed batch before exporting the result.")
+    st.dataframe(result_df.head(100), use_container_width=True, hide_index=True)
+    csv_buffer = io.StringIO()
+    result_df.to_csv(csv_buffer, index=False)
+    st.download_button(
+        "⬇ Download prediction results (.csv)",
+        data=csv_buffer.getvalue(),
+        file_name="pcos_multiclass_prediction_results.csv",
+        mime="text/csv",
+        use_container_width=False,
+    )
+
+st.caption(
+    "PCOS ML Prediction · Educational machine-learning portfolio project · "
+    "Three project-defined classes: Tidak PCOS, Borderline, PCOS Positif"
 )

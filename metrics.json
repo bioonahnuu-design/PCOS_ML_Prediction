@@ -1,0 +1,65 @@
+{
+  "dataset_rows": 541,
+  "feature_count": 41,
+  "train_rows": 432,
+  "test_rows": 109,
+  "test_size": 0.2,
+  "random_state": 42,
+  "derived_target_distribution": {
+    "0": 364,
+    "1": 31,
+    "2": 146
+  },
+  "models": {
+    "random_forest": {
+      "accuracy": 0.9083,
+      "precision_weighted": 0.8582,
+      "recall_weighted": 0.9083,
+      "f1_weighted": 0.8825,
+      "f1_macro": 0.6195,
+      "roc_auc_ovr_weighted": 0.9828,
+      "confusion_matrix": [
+        [
+          71,
+          0,
+          2
+        ],
+        [
+          5,
+          0,
+          1
+        ],
+        [
+          2,
+          0,
+          28
+        ]
+      ]
+    },
+    "svm": {
+      "accuracy": 0.9083,
+      "precision_weighted": 0.9244,
+      "recall_weighted": 0.9083,
+      "f1_weighted": 0.9134,
+      "f1_macro": 0.8048,
+      "roc_auc_ovr_weighted": 0.9866,
+      "confusion_matrix": [
+        [
+          65,
+          5,
+          3
+        ],
+        [
+          2,
+          4,
+          0
+        ],
+        [
+          0,
+          0,
+          30
+        ]
+      ]
+    }
+  }
+}
