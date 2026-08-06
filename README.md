@@ -2,6 +2,8 @@ PCOS Machine Learning Prediction
 
 A reproducible three-class PCOS screening project using Random Forest and Support Vector Machine (SVM), served through an interactive Streamlit application.
 
+Academic context: Developed as a Final Semester Examination (UAS) project for the Machine Learning / Pembelajaran Mesin course in Informatics Engineering at Universitas 17 Agustus 1945 Surabaya.
+
 Medical disclaimer: This is an educational prototype, not a diagnostic device. Borderline and PCOS Positif are project-derived symptom-score labels and are not clinically validated severity categories. Predictions must not replace examination, laboratory interpretation, or advice from a qualified healthcare professional.
 
 Highlights
@@ -189,16 +191,32 @@ Add authoritative dataset source and license
 
 Add cross-validation with confidence intervals
 
-Add confusion-matrix and ROC-curve visualizations
+Add multiclass ROC-curve visualization
 
 Add model-card documentation
 
 Add a polished application screenshot
 
-Deploy a clearly labeled educational demo
+Publish the educational demo on Streamlit Community Cloud
 
-Author
+Team — Kelompok 10
 
-Nahnu RohmaniaInformatics Engineering student exploring machine learning and responsible AI.
+NBI
 
-GitHub
+Name
+
+1462400047
+
+Hilva Najwa Aulia
+
+1462400146
+
+Nahnu Rohmania
+
+1462400167
+
+Zenicio Xavier Brito De Carvalho
+
+Informatics Engineering — Universitas 17 Agustus 1945 Surabaya.
+
+Project repository maintained by Nahnu Rohmania.
